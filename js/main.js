@@ -41,16 +41,48 @@ function initTheme() {
 }
 
 function initNavigation() {
+  try {
+    if (!history.state) {
+      history.replaceState({ step: "draw" }, "", window.location.hash || "#draw");
+    }
+  } catch (e) {}
+
   const stepDraw = document.getElementById("step-draw");
   const stepCode = document.getElementById("step-code");
+  const btnBackToDraw = document.getElementById("btn-back-to-draw");
 
-  if (stepDraw && stepCode) {
+  if (stepDraw) {
     stepDraw.addEventListener("click", () => {
+      try {
+        history.pushState({ step: "draw" }, "", "#draw");
+      } catch (e) {}
       setStep("draw");
+      setPhoneView("draw");
     });
+  }
+
+  if (stepCode) {
     stepCode.addEventListener("click", () => {
       if (state.built) {
+        try {
+          history.pushState({ step: "code" }, "", "#code");
+        } catch (e) {}
         setStep("code");
+        setPhoneView("code");
+      }
+    });
+  }
+
+  if (btnBackToDraw) {
+    btnBackToDraw.addEventListener("click", () => {
+      try {
+        history.pushState({ step: "draw" }, "", "#draw");
+      } catch (e) {}
+      setStep("draw");
+      setPhoneView("draw");
+      const drawPanel = document.getElementById("panel-draw");
+      if (drawPanel) {
+        drawPanel.scrollIntoView({ behavior: "smooth", block: "start" });
       }
     });
   }
@@ -60,10 +92,35 @@ function initNavigation() {
   const tabPreview = document.getElementById("tab-preview");
 
   if (tabDraw && tabCode && tabPreview) {
-    tabDraw.addEventListener("click", () => setPhoneView("draw"));
-    tabCode.addEventListener("click", () => setPhoneView("code"));
-    tabPreview.addEventListener("click", () => setPhoneView("preview"));
+    tabDraw.addEventListener("click", () => {
+      try {
+        history.pushState({ step: "draw" }, "", "#draw");
+      } catch (e) {}
+      setStep("draw");
+      setPhoneView("draw");
+    });
+    tabCode.addEventListener("click", () => {
+      try {
+        history.pushState({ step: "code" }, "", "#code");
+      } catch (e) {}
+      setStep("code");
+      setPhoneView("code");
+    });
+    tabPreview.addEventListener("click", () => {
+      setPhoneView("preview");
+    });
   }
+
+  window.addEventListener("popstate", (e) => {
+    const targetStep = e.state?.step || (window.location.hash === "#code" ? "code" : "draw");
+    if (targetStep === "draw") {
+      setStep("draw");
+      setPhoneView("draw");
+    } else if (state.built) {
+      setStep("code");
+      setPhoneView("code");
+    }
+  });
 }
 
 export function setStep(step) {
@@ -107,6 +164,10 @@ function onBuildMoment(result) {
   state.built = true;
   state.code = result.code;
   state.lastGeneratedCode = result.code;
+
+  try {
+    history.pushState({ step: "code" }, "", "#code");
+  } catch (e) {}
 
   setStep("code");
   setPhoneView("code");

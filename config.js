@@ -4,7 +4,7 @@ export const CONFIG = {
   version: "1.0.0",
 
   // The live address. Set in Phase 4 (deploy). Used for the share message and link previews.
-  siteUrl: "",
+  siteUrl: "https://sketch-the-site.vercel.app",
 
   // Sales WhatsApp: digits only, country code first. Empty hides the "Talk to us" button.
   salesWhatsApp: "",
