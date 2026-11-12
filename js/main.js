@@ -217,6 +217,12 @@ function init() {
   render();
   initScrollReveal();
 
+  if (window.location.search && window.location.search.includes("test=1")) {
+    import("./selftest.js").then(({ runSelfTest }) => {
+      runSelfTest();
+    });
+  }
+
   initLoader(() => {
     // Loader finished
   });
