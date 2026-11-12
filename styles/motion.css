@@ -1,0 +1,220 @@
+/* Loader Overlay */
+#loader {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--bg);
+  background-image: var(--bg-grad);
+  animation: loaderFallback 2s forwards;
+  transition: opacity 250ms var(--ease-out);
+  pointer-events: auto;
+}
+
+#loader.loader-fade {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+@keyframes loaderFallback {
+  0% {
+    opacity: 1;
+    visibility: visible;
+  }
+  85% {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  100% {
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+  }
+}
+
+.loader-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.loader-logo {
+  height: 48px;
+  width: auto;
+  object-fit: contain;
+}
+
+.loader-svg {
+  width: 96px;
+  height: 96px;
+}
+
+/* Pencil rough stroke drawing */
+.loader-stroke {
+  stroke-dasharray: 260;
+  stroke-dashoffset: 260;
+  animation: loaderDraw 550ms var(--ease-out) forwards;
+}
+
+@keyframes loaderDraw {
+  0% {
+    stroke-dashoffset: 260;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Morph/Fade from box to code brackets */
+.loader-brackets {
+  opacity: 0;
+  transform-origin: center;
+  transform: scale(0.85);
+  animation: loaderBracketsIn 250ms 450ms var(--ease-out) forwards;
+}
+
+@keyframes loaderBracketsIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.loader-bar {
+  width: 140px;
+  height: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--brand-grad);
+  transform-origin: left center;
+  animation: loaderBarSweep 800ms var(--ease-out) forwards;
+}
+
+@keyframes loaderBarSweep {
+  0% {
+    transform: scaleX(0);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+/* Hero reveal when loader finishes */
+body.with-loader .hero {
+  opacity: 0;
+  transform: translateY(12px);
+  transition: transform 250ms var(--ease-out), opacity 250ms var(--ease-out);
+}
+
+body.with-loader .hero.hero-revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Micro-interactions: Active press */
+button:active,
+.btn:active,
+.stepper-item:active,
+.phone-tab:active,
+.theme-btn:active {
+  transform: scale(0.97);
+}
+
+/* Hover effects (only when hover is supported) */
+@media (hover: hover) {
+  .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .btn-primary:hover {
+    background-position: right center;
+  }
+
+  .card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--brand-soft);
+  }
+
+  .drawing-wrapper:hover {
+    cursor: crosshair;
+  }
+
+  #code:hover,
+  #code:focus {
+    box-shadow: 0 0 0 2px var(--brand-soft);
+    border-color: var(--brand);
+  }
+
+  .animated-link {
+    position: relative;
+    text-decoration: none;
+  }
+
+  .animated-link::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -2px;
+    width: 0;
+    height: 2px;
+    background: var(--brand);
+    transition: width var(--duration-normal) var(--ease-out);
+  }
+
+  .animated-link:hover::after {
+    width: 100%;
+  }
+
+  .theme-btn:hover .theme-icon-sun,
+  .theme-btn:hover .theme-icon-moon {
+    transform: rotate(20deg);
+  }
+}
+
+/* Stroke fail shake */
+@keyframes strokeShake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  20%, 60% {
+    transform: translateX(-6px);
+  }
+  40%, 80% {
+    transform: translateX(6px);
+  }
+}
+
+.shake {
+  animation: strokeShake 300ms var(--ease);
+}
+
+/* Reduced Motion: Rule 6 & 11 */
+@media (prefers-reduced-motion: reduce) {
+  #loader {
+    display: none !important;
+  }
+
+  body.with-loader .hero {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

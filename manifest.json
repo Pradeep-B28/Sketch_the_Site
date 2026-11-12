@@ -1,0 +1,16 @@
+{
+  "name": "Sketch to Site | Wrench Wise",
+  "short_name": "Sketch to Site",
+  "description": "Free website builder for beginners. Draw a website. Get real code.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#059669",
+  "icons": [
+    {
+      "src": "assets/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}

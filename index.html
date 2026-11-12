@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; manifest-src 'self'; connect-src 'none'; frame-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none'">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0F172A" media="(prefers-color-scheme: dark)">
+  <title>Sketch to Site | Wrench Wise</title>
+  <meta name="description" content="Free website builder for beginners. Draw a website with your finger or mouse and get real, working HTML and CSS.">
+  <meta property="og:title" content="Sketch to Site | Wrench Wise">
+  <meta property="og:description" content="Free website builder for beginners. Draw a website with your finger or mouse and get real, working HTML and CSS.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="og-image.png">
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles/tokens.css">
+  <link rel="stylesheet" href="styles/base.css">
+  <link rel="stylesheet" href="styles/components.css">
+  <link rel="stylesheet" href="styles/motion.css">
+  <script src="js/theme-init.js"></script>
+</head>
+<body>
+  <div id="loader" aria-hidden="true">
+    <div class="loader-content">
+      <img src="assets/logo.png" alt="" class="loader-logo" width="160" height="36">
+      <svg class="loader-svg" viewBox="0 0 80 80" width="80" height="80" fill="none">
+        <rect class="loader-stroke" x="12" y="12" width="56" height="56" rx="10" stroke="#059669" stroke-width="3" stroke-linecap="round"></rect>
+        <g class="loader-brackets">
+          <path d="M 28 26 L 18 40 L 28 54" stroke="#059669" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M 52 26 L 62 40 L 52 54" stroke="#0891B2" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"></path>
+        </g>
+      </svg>
+      <div class="loader-bar"></div>
+    </div>
+  </div>
+
+  <div id="announcer" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+
+  <div class="brand-top-bar"></div>
+
+  <header class="site-header">
+    <a href="./" class="brand-wrapper" aria-label="Wrench Wise">
+      <img src="assets/logo.png" alt="Wrench Wise" class="brand-logo" width="140" height="32">
+    </a>
+    <div class="header-actions">
+      <button id="theme-toggle" class="theme-btn" type="button" aria-label="Toggle theme">
+        <svg class="theme-icon-sun" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="4"></circle>
+          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+        </svg>
+        <svg class="theme-icon-moon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <nav class="stepper-nav" aria-label="Steps">
+    <div class="stepper-item active" id="step-draw" data-step="draw">
+      <span class="step-label">1. Draw</span>
+    </div>
+    <div class="stepper-item" id="step-code" data-step="code">
+      <span class="step-label">2. Code</span>
+    </div>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <p class="hero-eyebrow">Free website builder for beginners</p>
+      <h1 class="hero-title">Draw a website. Get real code.</h1>
+      <p class="hero-sub">Sketch a few rough boxes with your finger or mouse. Sketch to Site turns them into a working web page. Then you make it look good by editing the code yourself.</p>
+    </header>
+
+    <div class="tool-container">
+      <div class="phone-tabs" id="phone-tabs" role="tablist" aria-label="Workspace tabs">
+        <button class="phone-tab active" id="tab-draw" role="tab" aria-selected="true" aria-controls="panel-draw" type="button">1. Draw</button>
+        <button class="phone-tab" id="tab-code" role="tab" aria-selected="false" aria-controls="panel-code" type="button">2. Code</button>
+        <button class="phone-tab" id="tab-preview" role="tab" aria-selected="false" aria-controls="panel-preview" type="button">Preview</button>
+      </div>
+
+      <div class="tool-grid" id="tool-grid">
+        <aside class="panel-draw-hint card" id="panel-hint">
+          <h2 class="card-title">How to draw</h2>
+          <p class="panel-hint-text">Draw a wide box at the top for a header, a big box for an image, a small box for a button and a wavy line for text.</p>
+          <div class="hint-legend">
+            <div class="legend-item">
+              <div class="legend-box header"></div>
+              <span>Header</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-box image"></div>
+              <span>Image</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-box button"></div>
+              <span>Button</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-box text"></div>
+              <span>Text</span>
+            </div>
+          </div>
+        </aside>
+
+        <section class="panel-draw card" id="panel-draw" aria-label="Drawing area">
+          <div class="card-header">
+            <h2 class="card-title">Draw your page</h2>
+            <span class="box-count-badge" id="draw-count">0 of 12 boxes</span>
+          </div>
+          <div class="drawing-wrapper" id="draw-wrapper">
+            <svg id="draw-canvas" class="drawing-svg" viewBox="0 0 360 480" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <pattern id="grid-pattern" width="20" height="20" patternUnits="userSpaceOnUse">
+                  <circle cx="2" cy="2" r="1" fill="var(--grid)"></circle>
+                </pattern>
+              </defs>
+              <rect width="360" height="480" fill="url(#grid-pattern)"></rect>
+              <g id="draw-boxes-group"></g>
+              <path id="draw-current-stroke" fill="none" stroke="var(--ink)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+          </div>
+          <div class="draw-toolbar" id="draw-toolbar">
+            <button class="btn btn-secondary" id="btn-undo" type="button" disabled>Undo</button>
+            <button class="btn btn-secondary" id="btn-clear" type="button" disabled>Clear</button>
+            <button class="btn btn-secondary" id="btn-sample" type="button">Try a sample sketch</button>
+            <button class="btn btn-primary" id="btn-build" type="button" disabled>Build my site</button>
+          </div>
+          <div id="stroke-feedback" class="feedback-text" aria-live="polite"></div>
+        </section>
+
+        <aside class="panel-result-empty card" id="panel-empty">
+          <h2 class="card-title">Your code shows up here.</h2>
+          <p>Draw a few boxes, then press Build my site.</p>
+        </aside>
+
+        <section class="panel-workspace" id="panel-workspace">
+          <div class="workspace-left">
+            <div class="card panel-code" id="panel-code">
+              <div class="card-header">
+                <h2 class="card-title">Your code</h2>
+                <div class="code-actions">
+                  <button class="btn btn-secondary" id="btn-copy" type="button">Copy code</button>
+                  <button class="btn btn-secondary" id="btn-reset" type="button">Reset my edits</button>
+                  <button class="btn btn-primary" id="btn-download" type="button">Download my site</button>
+                </div>
+              </div>
+              <div class="code-box-wrapper">
+                <textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Website code. Edit it and watch the preview change."></textarea>
+              </div>
+              <div class="code-status-row">
+                <span id="line-count-display">0 lines</span>
+                <span id="storage-saved-badge">Saved on this device</span>
+              </div>
+            </div>
+
+            <div class="card panel-missions" id="panel-missions">
+              <div class="card-header">
+                <h2 class="card-title">Make it yours</h2>
+                <span id="missions-count">0 of 6 upgrades done.</span>
+              </div>
+              <p>Six small edits. Each one is a real skill.</p>
+              <div id="missions-list" class="missions-list"></div>
+            </div>
+          </div>
+
+          <div class="workspace-right">
+            <div class="card panel-preview" id="panel-preview">
+              <div class="card-header">
+                <h2 class="card-title">Live preview</h2>
+                <div class="preview-mode-switch" id="preview-mode-switch">
+                  <button class="btn btn-ghost active" id="btn-view-phone" type="button">Phone</button>
+                  <button class="btn btn-ghost" id="btn-view-laptop" type="button">Laptop</button>
+                </div>
+              </div>
+              <div class="preview-frame-wrapper">
+                <iframe id="preview" sandbox="" title="Live preview of your website"></iframe>
+              </div>
+              <p class="preview-note">The preview changes as you type.</p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <div class="content-sections">
+      <section class="info-section card" id="section-how">
+        <h2 class="info-section-title">How it works</h2>
+      </section>
+
+      <section class="info-section card" id="section-privacy">
+        <h2 class="info-section-title">Check it yourself</h2>
+      </section>
+
+      <section class="info-section card" id="section-hood">
+        <h2 class="info-section-title">What happens when you press Build</h2>
+      </section>
+
+      <section class="info-section card" id="section-cta">
+        <h2 class="info-section-title">Want to build real websites from scratch?</h2>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-content">
+      <p>Built by Wrench Wise</p>
+      <p>Your sketch stays on your device.</p>
+    </div>
+  </footer>
+
+  <noscript>
+    <div class="noscript-banner">This page needs JavaScript to run.</div>
+  </noscript>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
