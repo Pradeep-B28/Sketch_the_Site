@@ -107,6 +107,53 @@
   }
 }
 
+/* Empty Canvas Pencil Bob */
+@keyframes pencilBob {
+  0%, 100% {
+    transform: translate(160px, 200px);
+  }
+  50% {
+    transform: translate(160px, 193px);
+  }
+}
+
+.empty-pencil-bob {
+  animation: pencilBob 2.5s ease-in-out infinite;
+}
+
+/* Box Snapping Micro-interaction (260ms) */
+.box-snapping .box-rect {
+  animation: boxGrow 260ms var(--ease-out);
+  transform-origin: center;
+}
+
+@keyframes boxGrow {
+  0% {
+    opacity: 0.3;
+    transform: scale(0.94);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.box-snapping .box-chip {
+  animation: chipPop 260ms var(--ease-out);
+  transform-origin: center;
+}
+
+@keyframes chipPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.75);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 /* Hero reveal when loader finishes */
 body.with-loader .hero {
   opacity: 0;

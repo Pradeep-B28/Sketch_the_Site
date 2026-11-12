@@ -3,17 +3,21 @@ import { COPY, t } from "./copy.js";
 import { newSketch } from "./engine/sketch.js";
 import { loadTheme, saveTheme, loadSketch, loadCode } from "./store.js";
 import { initLoader } from "./motion.js";
+import { DrawUI } from "./draw-ui.js";
 
 // Global application state
 export const state = {
   sketch: newSketch(),
   history: [],
   code: "",
+  lastGeneratedCode: "",
   built: false,
   activeStep: "draw",
   phoneView: "draw",
   previewMode: "phone"
 };
+
+let drawUI = null;
 
 function initTheme() {
   const toggleBtn = document.getElementById("theme-toggle");
@@ -90,6 +94,15 @@ export function setPhoneView(view) {
   }
 }
 
+function onBuildComplete(result) {
+  state.built = true;
+  state.code = result.code;
+  state.lastGeneratedCode = result.code;
+  setStep("code");
+  setPhoneView("code");
+  render();
+}
+
 export function render() {
   const toolGrid = document.getElementById("tool-grid");
   if (!toolGrid) return;
@@ -100,12 +113,8 @@ export function render() {
     toolGrid.classList.remove("is-built");
   }
 
-  const drawCount = document.getElementById("draw-count");
-  if (drawCount) {
-    drawCount.textContent = t("draw.count", {
-      count: state.sketch.boxes.length,
-      max: 12
-    });
+  if (drawUI) {
+    drawUI.render();
   }
 }
 
@@ -123,10 +132,12 @@ function init() {
 
   initTheme();
   initNavigation();
+
+  drawUI = new DrawUI(state, onBuildComplete);
   render();
 
   initLoader(() => {
-    // Loader finished callback
+    // Loader complete
   });
 }
 
