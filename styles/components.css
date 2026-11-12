@@ -532,12 +532,20 @@
 
 /* Box Hover & Focus */
 .drawn-box-group:hover .box-rect,
-.drawn-box-group:focus-visible .box-rect {
-  stroke-width: 3.5px;
+.drawn-box-group:focus-visible .box-rect,
+.drawn-box-group.is-active .box-rect {
+  stroke-width: 3px;
 }
 
 .drawn-box-group:hover .box-remove-btn,
-.drawn-box-group:focus-visible .box-remove-btn {
+.drawn-box-group:hover .box-copy-btn,
+.drawn-box-group:hover .box-resize-handle,
+.drawn-box-group:focus-visible .box-remove-btn,
+.drawn-box-group:focus-visible .box-copy-btn,
+.drawn-box-group:focus-visible .box-resize-handle,
+.drawn-box-group.is-active .box-remove-btn,
+.drawn-box-group.is-active .box-copy-btn,
+.drawn-box-group.is-active .box-resize-handle {
   opacity: 1;
   pointer-events: auto;
 }
@@ -546,15 +554,78 @@
   stroke: var(--accent);
 }
 
-.box-label-chip {
+.box-chip {
   cursor: pointer;
 }
 
-.box-remove-btn {
+.box-chip .chip-bg {
+  transition: transform 150ms var(--ease), filter 150ms var(--ease);
+}
+
+.box-chip:hover .chip-bg {
+  filter: brightness(1.08);
+}
+
+.chip-header .chip-bg {
+  fill: #EDE9FE;
+  stroke: var(--kind-header);
+}
+
+.chip-image .chip-bg {
+  fill: #CFFAFE;
+  stroke: var(--kind-image);
+}
+
+.chip-button .chip-bg {
+  fill: #D1FAE5;
+  stroke: var(--kind-button);
+}
+
+.chip-text .chip-bg {
+  fill: #FEF3C7;
+  stroke: var(--kind-text);
+}
+
+[data-theme="dark"] .chip-header .chip-bg {
+  fill: #3B1D6E;
+  stroke: var(--kind-header);
+}
+
+[data-theme="dark"] .chip-image .chip-bg {
+  fill: #0E4E63;
+  stroke: var(--kind-image);
+}
+
+[data-theme="dark"] .chip-button .chip-bg {
+  fill: #064E3B;
+  stroke: var(--kind-button);
+}
+
+[data-theme="dark"] .chip-text .chip-bg {
+  fill: #5B2B04;
+  stroke: var(--kind-text);
+}
+
+.chip-letter {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 800;
+  fill: var(--text);
+  user-select: none;
+  pointer-events: none;
+}
+
+.box-remove-btn,
+.box-copy-btn {
   opacity: 0;
   cursor: pointer;
   pointer-events: none;
-  transition: opacity 150ms var(--ease);
+  transition: opacity 150ms var(--ease), transform 150ms var(--ease);
+}
+
+.box-remove-btn:hover,
+.box-copy-btn:hover {
+  transform: scale(1.15);
 }
 
 .remove-bg {
@@ -563,6 +634,32 @@
 
 .remove-cross {
   color: #FFFFFF;
+}
+
+.copy-bg {
+  fill: var(--brand);
+}
+
+.box-resize-handle {
+  cursor: nwse-resize;
+  opacity: 0.7;
+  transition: opacity 150ms var(--ease), transform 150ms var(--ease);
+  touch-action: none;
+}
+
+.box-resize-handle:hover {
+  opacity: 1;
+  transform: scale(1.15);
+}
+
+.resize-bg {
+  fill: var(--surface);
+  stroke: var(--brand);
+  stroke-width: 1.5;
+}
+
+.resize-grip {
+  color: var(--brand-strong);
 }
 
 .box-count-badge {

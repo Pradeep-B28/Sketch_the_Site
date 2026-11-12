@@ -1,17 +1,21 @@
 import { CONFIG } from "../config.js";
 import { COPY, t } from "./copy.js";
-import { PAGE, addStroke, removeBox, setKind, nextKind, generate } from "./engine/sketch.js";
+import { PAGE, LIMITS, addStroke, removeBox, setKind, nextKind, generate } from "./engine/sketch.js";
 import { sampleStrokes } from "./sample-data.js";
 import { saveSketch, saveCode } from "./store.js";
 import { isReducedMotion } from "./motion.js";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
+const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
 
 export class DrawUI {
   constructor(state, onBuild) {
     this.state = state;
     this.onBuild = onBuild;
     this.isDrawing = false;
+    this.isResizing = false;
+    this.activeBoxId = null;
+    this.clipboardBox = null;
     this.currentPoints = [];
     this.tapHintShown = false;
     this.isSamplePlaying = false;
@@ -75,7 +79,7 @@ export class DrawUI {
     if (!this.svg) return;
 
     this.svg.addEventListener("pointerdown", (e) => {
-      if (this.isSamplePlaying) return;
+      if (this.isSamplePlaying || this.isResizing) return;
       if (e.button !== 0 && e.pointerType === "mouse") return;
 
       this.isDrawing = true;
@@ -84,6 +88,15 @@ export class DrawUI {
 
       this.clearFeedback();
       this.updateCurrentStroke();
+    });
+
+    this.svg.addEventListener("click", (e) => {
+      if (e.target === this.svg || e.target.id === "draw-canvas" || (e.target.tagName === "rect" && e.target.getAttribute("fill")?.includes("grid"))) {
+        this.activeBoxId = null;
+        if (this.boxesGroup) {
+          this.boxesGroup.querySelectorAll(".drawn-box-group").forEach((el) => el.classList.remove("is-active"));
+        }
+      }
     });
 
     this.svg.addEventListener("pointermove", (e) => {
@@ -470,9 +483,12 @@ export class DrawUI {
     boxes.forEach((box) => {
       const g = document.createElementNS(SVG_NS, "g");
       g.setAttribute("class", `drawn-box-group kind-${box.kind}`);
+      if (this.activeBoxId === box.id) {
+        g.classList.add("is-active");
+      }
       g.setAttribute("tabindex", "0");
       g.setAttribute("role", "button");
-      g.setAttribute("aria-label", `${t("kinds." + box.kind)} box. Press Enter to change kind, Delete to remove.`);
+      g.setAttribute("aria-label", `${t("kinds." + box.kind)} box. Press Enter to change kind, Delete to remove, Ctrl+C to copy.`);
       g.setAttribute("data-id", String(box.id));
 
       if (snapBoxId === box.id) {
@@ -489,30 +505,39 @@ export class DrawUI {
       rect.setAttribute("rx", box.kind === "button" ? "16" : "8");
       g.appendChild(rect);
 
-      // Label Chip (Top-Left)
+      // Label Chip (Top-Left) with starting letter only
       const chipG = document.createElementNS(SVG_NS, "g");
       chipG.setAttribute("class", `box-chip chip-${box.kind}`);
       chipG.setAttribute("transform", `translate(${box.x + 4}, ${box.y + 4})`);
+      chipG.setAttribute("role", "button");
+      chipG.setAttribute("aria-label", t("kinds." + box.kind));
 
-      const chipWidth = box.kind === "header" || box.kind === "button" ? 68 : 58;
+      const chipWidth = 32;
       const chipBg = document.createElementNS(SVG_NS, "rect");
       chipBg.setAttribute("class", "chip-bg");
       chipBg.setAttribute("width", String(chipWidth));
       chipBg.setAttribute("height", "18");
       chipBg.setAttribute("rx", "9");
+      chipBg.setAttribute("stroke-width", "1.2");
       chipG.appendChild(chipBg);
 
       const iconWrap = document.createElementNS(SVG_NS, "g");
-      iconWrap.setAttribute("transform", "translate(5, 3.5)");
+      iconWrap.setAttribute("transform", "translate(4, 3.5)");
       iconWrap.appendChild(this.createKindIcon(box.kind));
       chipG.appendChild(iconWrap);
 
-      const chipText = document.createElementNS(SVG_NS, "text");
-      chipText.setAttribute("class", "chip-text");
-      chipText.setAttribute("x", "22");
-      chipText.setAttribute("y", "12.5");
-      chipText.textContent = t("kinds." + box.kind);
-      chipG.appendChild(chipText);
+      const chipLetter = document.createElementNS(SVG_NS, "text");
+      chipLetter.setAttribute("class", "chip-letter");
+      chipLetter.setAttribute("x", "21");
+      chipLetter.setAttribute("y", "12.5");
+      chipLetter.setAttribute("text-anchor", "middle");
+      const initial = (t("kinds." + box.kind) || box.kind).charAt(0).toUpperCase();
+      chipLetter.textContent = initial;
+      chipG.appendChild(chipLetter);
+
+      const chipTitle = document.createElementNS(SVG_NS, "title");
+      chipTitle.textContent = t("kinds." + box.kind);
+      chipG.appendChild(chipTitle);
 
       chipG.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -522,10 +547,58 @@ export class DrawUI {
 
       g.appendChild(chipG);
 
+      // Copy / Duplicate button (Top-Right, next to remove)
+      const copyG = document.createElementNS(SVG_NS, "g");
+      copyG.setAttribute("class", "box-copy-btn");
+      copyG.setAttribute("transform", `translate(${box.x + box.w - 36}, ${box.y + 3})`);
+      copyG.setAttribute("role", "button");
+      copyG.setAttribute("aria-label", t("code.copy") || "Copy");
+
+      const copyBg = document.createElementNS(SVG_NS, "circle");
+      copyBg.setAttribute("class", "copy-bg");
+      copyBg.setAttribute("cx", "7");
+      copyBg.setAttribute("cy", "7");
+      copyBg.setAttribute("r", "7");
+      copyG.appendChild(copyBg);
+
+      const copyRectBack = document.createElementNS(SVG_NS, "rect");
+      copyRectBack.setAttribute("x", "4");
+      copyRectBack.setAttribute("y", "3.5");
+      copyRectBack.setAttribute("width", "5");
+      copyRectBack.setAttribute("height", "5");
+      copyRectBack.setAttribute("rx", "1");
+      copyRectBack.setAttribute("fill", "none");
+      copyRectBack.setAttribute("stroke", "#FFFFFF");
+      copyRectBack.setAttribute("stroke-width", "1");
+      copyG.appendChild(copyRectBack);
+
+      const copyRectFront = document.createElementNS(SVG_NS, "rect");
+      copyRectFront.setAttribute("x", "5.5");
+      copyRectFront.setAttribute("y", "5.5");
+      copyRectFront.setAttribute("width", "5");
+      copyRectFront.setAttribute("height", "5");
+      copyRectFront.setAttribute("rx", "1");
+      copyRectFront.setAttribute("fill", "var(--brand)");
+      copyRectFront.setAttribute("stroke", "#FFFFFF");
+      copyRectFront.setAttribute("stroke-width", "1");
+      copyG.appendChild(copyRectFront);
+
+      const copyTitle = document.createElementNS(SVG_NS, "title");
+      copyTitle.textContent = t("code.copy") || "Copy";
+      copyG.appendChild(copyTitle);
+
+      copyG.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.duplicateBox(box.id);
+      });
+
+      g.appendChild(copyG);
+
       // Remove button (Top-Right)
       const removeG = document.createElementNS(SVG_NS, "g");
       removeG.setAttribute("class", "box-remove-btn");
       removeG.setAttribute("transform", `translate(${box.x + box.w - 18}, ${box.y + 3})`);
+      removeG.setAttribute("role", "button");
       removeG.setAttribute("aria-label", t("draw.remove"));
 
       const removeBg = document.createElementNS(SVG_NS, "circle");
@@ -543,12 +616,65 @@ export class DrawUI {
       removeCross.setAttribute("stroke-linecap", "round");
       removeG.appendChild(removeCross);
 
+      const removeTitle = document.createElementNS(SVG_NS, "title");
+      removeTitle.textContent = t("draw.remove");
+      removeG.appendChild(removeTitle);
+
       removeG.addEventListener("click", (e) => {
         e.stopPropagation();
         this.removeBoxById(box.id);
       });
 
       g.appendChild(removeG);
+
+      // Resize Handle (Bottom-Right Corner)
+      const resizeHandle = document.createElementNS(SVG_NS, "g");
+      resizeHandle.setAttribute("class", "box-resize-handle");
+      resizeHandle.setAttribute("transform", `translate(${box.x + box.w - 14}, ${box.y + box.h - 14})`);
+      resizeHandle.setAttribute("role", "slider");
+      resizeHandle.setAttribute("aria-label", "Resize box");
+
+      const hitRect = document.createElementNS(SVG_NS, "rect");
+      hitRect.setAttribute("x", "-4");
+      hitRect.setAttribute("y", "-4");
+      hitRect.setAttribute("width", "20");
+      hitRect.setAttribute("height", "20");
+      hitRect.setAttribute("fill", "transparent");
+      resizeHandle.appendChild(hitRect);
+
+      const resizeCircle = document.createElementNS(SVG_NS, "circle");
+      resizeCircle.setAttribute("class", "resize-bg");
+      resizeCircle.setAttribute("cx", "7");
+      resizeCircle.setAttribute("cy", "7");
+      resizeCircle.setAttribute("r", "6");
+      resizeHandle.appendChild(resizeCircle);
+
+      const resizeGrip = document.createElementNS(SVG_NS, "path");
+      resizeGrip.setAttribute("class", "resize-grip");
+      resizeGrip.setAttribute("d", "M 4 8 L 8 4 M 6 10 L 10 6");
+      resizeGrip.setAttribute("stroke", "currentColor");
+      resizeGrip.setAttribute("stroke-width", "1.2");
+      resizeGrip.setAttribute("stroke-linecap", "round");
+      resizeHandle.appendChild(resizeGrip);
+
+      const resizeTitle = document.createElementNS(SVG_NS, "title");
+      resizeTitle.textContent = "Drag to resize";
+      resizeHandle.appendChild(resizeTitle);
+
+      this.bindResizeEvents(resizeHandle, box, rect, removeG, copyG);
+      g.appendChild(resizeHandle);
+
+      // Selection on tap/click
+      g.addEventListener("pointerdown", (e) => {
+        e.stopPropagation();
+      });
+      g.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.activeBoxId = box.id;
+        this.boxesGroup.querySelectorAll(".drawn-box-group").forEach((el) => {
+          el.classList.toggle("is-active", el.getAttribute("data-id") === String(box.id));
+        });
+      });
 
       // Keyboard support
       g.addEventListener("keydown", (e) => {
@@ -558,6 +684,23 @@ export class DrawUI {
         } else if (e.key === "Delete" || e.key === "Backspace") {
           e.preventDefault();
           this.removeBoxById(box.id);
+        } else if ((e.ctrlKey || e.metaKey) && (e.key === "c" || e.key === "C")) {
+          e.preventDefault();
+          this.clipboardBox = { ...box };
+        } else if ((e.ctrlKey || e.metaKey) && (e.key === "v" || e.key === "V")) {
+          e.preventDefault();
+          if (this.clipboardBox) {
+            this.duplicateBox(this.clipboardBox.id);
+          }
+        } else if ((e.ctrlKey || e.metaKey) && (e.key === "d" || e.key === "D")) {
+          e.preventDefault();
+          this.duplicateBox(box.id);
+        } else if (e.key === "+" || e.key === "=") {
+          e.preventDefault();
+          this.resizeBoxStep(box.id, 1);
+        } else if (e.key === "-" || e.key === "_") {
+          e.preventDefault();
+          this.resizeBoxStep(box.id, -1);
         }
       });
 
@@ -622,5 +765,119 @@ export class DrawUI {
     } else {
       this.state.history.pop();
     }
+  }
+
+  duplicateBox(id) {
+    if (this.state.sketch.boxes.length >= LIMITS.boxes) {
+      this.showStrokeFailure("full");
+      return;
+    }
+
+    const source = this.state.sketch.boxes.find((b) => b.id === id);
+    if (!source) return;
+
+    this.pushHistory();
+
+    let newX = source.x + 16;
+    let newY = source.y + 16;
+
+    if (newX + source.w > PAGE.w) {
+      newX = Math.max(0, PAGE.w - source.w);
+    }
+    if (newY + source.h > PAGE.h) {
+      newY = Math.max(0, PAGE.h - source.h);
+    }
+
+    const hasHeader = this.state.sketch.boxes.some((b) => b.kind === "header");
+    const targetKind = (source.kind === "header" && hasHeader) ? "text" : source.kind;
+
+    const newId = this.state.sketch.nextId++;
+    const newBox = {
+      id: newId,
+      x: newX,
+      y: newY,
+      w: source.w,
+      h: source.h,
+      kind: targetKind
+    };
+
+    this.state.sketch.boxes.push(newBox);
+    this.activeBoxId = newId;
+    saveSketch(this.state.sketch);
+    this.render(newId);
+  }
+
+  bindResizeEvents(handle, box, rect, removeG, copyG) {
+    handle.addEventListener("pointerdown", (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+
+      this.isResizing = true;
+      const startClientX = e.clientX;
+      const startClientY = e.clientY;
+      const startW = box.w;
+      const startH = box.h;
+      const startX = box.x;
+      const startY = box.y;
+
+      const svgRect = this.svg.getBoundingClientRect();
+      const scaleX = PAGE.w / svgRect.width;
+      const scaleY = PAGE.h / svgRect.height;
+
+      this.pushHistory();
+
+      const onPointerMove = (moveEvt) => {
+        moveEvt.preventDefault();
+        const dx = (moveEvt.clientX - startClientX) * scaleX;
+        const dy = (moveEvt.clientY - startClientY) * scaleY;
+
+        const newW = clamp(Math.round(startW + dx), LIMITS.minSize, PAGE.w - startX);
+        const newH = clamp(Math.round(startH + dy), LIMITS.flat, PAGE.h - startY);
+
+        box.w = newW;
+        box.h = newH;
+
+        rect.setAttribute("width", String(newW));
+        rect.setAttribute("height", String(newH));
+        removeG.setAttribute("transform", `translate(${startX + newW - 18}, ${startY + 3})`);
+        copyG.setAttribute("transform", `translate(${startX + newW - 36}, ${startY + 3})`);
+        handle.setAttribute("transform", `translate(${startX + newW - 14}, ${startY + newH - 14})`);
+      };
+
+      const onPointerUp = (upEvt) => {
+        handle.removeEventListener("pointermove", onPointerMove);
+        handle.removeEventListener("pointerup", onPointerUp);
+        handle.removeEventListener("pointercancel", onPointerUp);
+        try {
+          handle.releasePointerCapture(upEvt.pointerId);
+        } catch (_) {}
+
+        this.isResizing = false;
+        saveSketch(this.state.sketch);
+        this.render(box.id);
+      };
+
+      try {
+        handle.setPointerCapture(e.pointerId);
+      } catch (_) {}
+      handle.addEventListener("pointermove", onPointerMove);
+      handle.addEventListener("pointerup", onPointerUp);
+      handle.addEventListener("pointercancel", onPointerUp);
+    });
+  }
+
+  resizeBoxStep(id, direction) {
+    const box = this.state.sketch.boxes.find((b) => b.id === id);
+    if (!box) return;
+
+    this.pushHistory();
+    const deltaW = direction * 16;
+    const deltaH = direction * 12;
+
+    box.w = clamp(box.w + deltaW, LIMITS.minSize, PAGE.w - box.x);
+    box.h = clamp(box.h + deltaH, LIMITS.flat, PAGE.h - box.y);
+
+    saveSketch(this.state.sketch);
+    this.render(box.id);
   }
 }
