@@ -82,6 +82,13 @@ export class DrawUI {
       if (this.isSamplePlaying || this.isResizing) return;
       if (e.button !== 0 && e.pointerType === "mouse") return;
 
+      const isCanvasBg = e.target === this.svg ||
+                         e.target.id === "draw-canvas" ||
+                         e.target.id === "draw-empty-state" ||
+                         (e.target.closest && e.target.closest("#draw-empty-state")) ||
+                         (e.target.tagName === "rect" && e.target.getAttribute("fill")?.includes("grid"));
+      if (!isCanvasBg) return;
+
       this.isDrawing = true;
       this.currentPoints = [this.getPointerPos(e)];
       this.svg.setPointerCapture(e.pointerId);
@@ -587,6 +594,9 @@ export class DrawUI {
       copyTitle.textContent = t("code.copy") || "Copy";
       copyG.appendChild(copyTitle);
 
+      copyG.addEventListener("pointerdown", (e) => {
+        e.stopPropagation();
+      });
       copyG.addEventListener("click", (e) => {
         e.stopPropagation();
         this.duplicateBox(box.id);
@@ -620,6 +630,9 @@ export class DrawUI {
       removeTitle.textContent = t("draw.remove");
       removeG.appendChild(removeTitle);
 
+      removeG.addEventListener("pointerdown", (e) => {
+        e.stopPropagation();
+      });
       removeG.addEventListener("click", (e) => {
         e.stopPropagation();
         this.removeBoxById(box.id);
@@ -627,42 +640,50 @@ export class DrawUI {
 
       g.appendChild(removeG);
 
-      // Resize Handle (Bottom-Right Corner)
-      const resizeHandle = document.createElementNS(SVG_NS, "g");
-      resizeHandle.setAttribute("class", "box-resize-handle");
-      resizeHandle.setAttribute("transform", `translate(${box.x + box.w - 14}, ${box.y + box.h - 14})`);
-      resizeHandle.setAttribute("role", "slider");
-      resizeHandle.setAttribute("aria-label", "Resize box");
+      // 8 Resize Handles on all sides and corners
+      const HANDLE_DIRS = [
+        { dir: "nw", cursor: "nwse-resize", label: "Resize top-left", getPos: (b) => [b.x, b.y] },
+        { dir: "n",  cursor: "ns-resize",   label: "Resize top",      getPos: (b) => [b.x + b.w / 2, b.y] },
+        { dir: "ne", cursor: "nesw-resize", label: "Resize top-right",getPos: (b) => [b.x + b.w, b.y] },
+        { dir: "e",  cursor: "ew-resize",   label: "Resize right",    getPos: (b) => [b.x + b.w, b.y + b.h / 2] },
+        { dir: "se", cursor: "nwse-resize", label: "Resize bottom-right", getPos: (b) => [b.x + b.w, b.y + b.h] },
+        { dir: "s",  cursor: "ns-resize",   label: "Resize bottom",   getPos: (b) => [b.x + b.w / 2, b.y + b.h] },
+        { dir: "sw", cursor: "nesw-resize", label: "Resize bottom-left", getPos: (b) => [b.x, b.y + b.h] },
+        { dir: "w",  cursor: "ew-resize",   label: "Resize left",     getPos: (b) => [b.x, b.y + b.h / 2] }
+      ];
 
-      const hitRect = document.createElementNS(SVG_NS, "rect");
-      hitRect.setAttribute("x", "-4");
-      hitRect.setAttribute("y", "-4");
-      hitRect.setAttribute("width", "20");
-      hitRect.setAttribute("height", "20");
-      hitRect.setAttribute("fill", "transparent");
-      resizeHandle.appendChild(hitRect);
+      const handlesMap = {};
 
-      const resizeCircle = document.createElementNS(SVG_NS, "circle");
-      resizeCircle.setAttribute("class", "resize-bg");
-      resizeCircle.setAttribute("cx", "7");
-      resizeCircle.setAttribute("cy", "7");
-      resizeCircle.setAttribute("r", "6");
-      resizeHandle.appendChild(resizeCircle);
+      HANDLE_DIRS.forEach(({ dir, cursor, label, getPos }) => {
+        const handle = document.createElementNS(SVG_NS, "g");
+        handle.setAttribute("class", `box-resize-handle handle-${dir}`);
+        const [hx, hy] = getPos(box);
+        handle.setAttribute("transform", `translate(${hx}, ${hy})`);
+        handle.setAttribute("role", "slider");
+        handle.setAttribute("aria-label", label);
+        handle.style.cursor = cursor;
 
-      const resizeGrip = document.createElementNS(SVG_NS, "path");
-      resizeGrip.setAttribute("class", "resize-grip");
-      resizeGrip.setAttribute("d", "M 4 8 L 8 4 M 6 10 L 10 6");
-      resizeGrip.setAttribute("stroke", "currentColor");
-      resizeGrip.setAttribute("stroke-width", "1.2");
-      resizeGrip.setAttribute("stroke-linecap", "round");
-      resizeHandle.appendChild(resizeGrip);
+        // Transparent hit rect for easy touch/mouse grab
+        const hit = document.createElementNS(SVG_NS, "rect");
+        hit.setAttribute("x", "-8");
+        hit.setAttribute("y", "-8");
+        hit.setAttribute("width", "16");
+        hit.setAttribute("height", "16");
+        hit.setAttribute("fill", "transparent");
+        handle.appendChild(hit);
 
-      const resizeTitle = document.createElementNS(SVG_NS, "title");
-      resizeTitle.textContent = "Drag to resize";
-      resizeHandle.appendChild(resizeTitle);
+        // Visible handle grip dot
+        const dot = document.createElementNS(SVG_NS, "circle");
+        dot.setAttribute("class", "resize-bg");
+        dot.setAttribute("cx", "0");
+        dot.setAttribute("cy", "0");
+        dot.setAttribute("r", "4.5");
+        handle.appendChild(dot);
 
-      this.bindResizeEvents(resizeHandle, box, rect, removeG, copyG);
-      g.appendChild(resizeHandle);
+        handlesMap[dir] = handle;
+        this.bindResizeEvents(handle, dir, box, rect, chipG, copyG, removeG, handlesMap);
+        g.appendChild(handle);
+      });
 
       // Selection on tap/click
       g.addEventListener("pointerdown", (e) => {
@@ -807,7 +828,7 @@ export class DrawUI {
     this.render(newId);
   }
 
-  bindResizeEvents(handle, box, rect, removeG, copyG) {
+  bindResizeEvents(handle, dir, box, rect, chipG, copyG, removeG, handlesMap) {
     handle.addEventListener("pointerdown", (e) => {
       e.stopPropagation();
       e.preventDefault();
@@ -831,17 +852,59 @@ export class DrawUI {
         const dx = (moveEvt.clientX - startClientX) * scaleX;
         const dy = (moveEvt.clientY - startClientY) * scaleY;
 
-        const newW = clamp(Math.round(startW + dx), LIMITS.minSize, PAGE.w - startX);
-        const newH = clamp(Math.round(startH + dy), LIMITS.flat, PAGE.h - startY);
+        let curX = startX;
+        let curY = startY;
+        let curW = startW;
+        let curH = startH;
 
-        box.w = newW;
-        box.h = newH;
+        // Horizontal sizing
+        if (dir.includes("e")) {
+          // East / Right side: extend width to the right
+          curW = clamp(Math.round(startW + dx), LIMITS.minSize, PAGE.w - startX);
+        } else if (dir.includes("w")) {
+          // West / Left side: shift x and adjust width, right edge stays fixed
+          const origRight = startX + startW;
+          const maxLeft = origRight - LIMITS.minSize;
+          curX = clamp(Math.round(startX + dx), 0, maxLeft);
+          curW = origRight - curX;
+        }
 
-        rect.setAttribute("width", String(newW));
-        rect.setAttribute("height", String(newH));
-        removeG.setAttribute("transform", `translate(${startX + newW - 18}, ${startY + 3})`);
-        copyG.setAttribute("transform", `translate(${startX + newW - 36}, ${startY + 3})`);
-        handle.setAttribute("transform", `translate(${startX + newW - 14}, ${startY + newH - 14})`);
+        // Vertical sizing
+        if (dir.includes("s")) {
+          // South / Bottom side: extend height downwards
+          curH = clamp(Math.round(startH + dy), LIMITS.flat, PAGE.h - startY);
+        } else if (dir.includes("n")) {
+          // North / Top side: shift y and adjust height, bottom edge stays fixed
+          const origBottom = startY + startH;
+          const maxTop = origBottom - LIMITS.flat;
+          curY = clamp(Math.round(startY + dy), 0, maxTop);
+          curH = origBottom - curY;
+        }
+
+        box.x = curX;
+        box.y = curY;
+        box.w = curW;
+        box.h = curH;
+
+        rect.setAttribute("x", String(curX));
+        rect.setAttribute("y", String(curY));
+        rect.setAttribute("width", String(curW));
+        rect.setAttribute("height", String(curH));
+
+        chipG.setAttribute("transform", `translate(${curX + 4}, ${curY + 4})`);
+        copyG.setAttribute("transform", `translate(${curX + curW - 36}, ${curY + 3})`);
+        removeG.setAttribute("transform", `translate(${curX + curW - 18}, ${curY + 3})`);
+
+        if (handlesMap) {
+          if (handlesMap.nw) handlesMap.nw.setAttribute("transform", `translate(${curX}, ${curY})`);
+          if (handlesMap.n) handlesMap.n.setAttribute("transform", `translate(${curX + curW / 2}, ${curY})`);
+          if (handlesMap.ne) handlesMap.ne.setAttribute("transform", `translate(${curX + curW}, ${curY})`);
+          if (handlesMap.e) handlesMap.e.setAttribute("transform", `translate(${curX + curW}, ${curY + curH / 2})`);
+          if (handlesMap.se) handlesMap.se.setAttribute("transform", `translate(${curX + curW}, ${curY + curH})`);
+          if (handlesMap.s) handlesMap.s.setAttribute("transform", `translate(${curX + curW / 2}, ${curY + curH})`);
+          if (handlesMap.sw) handlesMap.sw.setAttribute("transform", `translate(${curX}, ${curY + curH})`);
+          if (handlesMap.w) handlesMap.w.setAttribute("transform", `translate(${curX}, ${curY + curH / 2})`);
+        }
       };
 
       const onPointerUp = (upEvt) => {

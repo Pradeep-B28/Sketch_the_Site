@@ -620,16 +620,17 @@
   opacity: 0;
   cursor: pointer;
   pointer-events: none;
-  transition: opacity 150ms var(--ease), transform 150ms var(--ease);
-}
-
-.box-remove-btn:hover,
-.box-copy-btn:hover {
-  transform: scale(1.15);
+  transition: opacity 150ms var(--ease);
 }
 
 .remove-bg {
   fill: #EF4444;
+  transition: fill 150ms var(--ease), filter 150ms var(--ease);
+}
+
+.box-remove-btn:hover .remove-bg {
+  fill: #DC2626;
+  filter: drop-shadow(0 2px 4px rgba(220, 38, 38, 0.45));
 }
 
 .remove-cross {
@@ -638,28 +639,38 @@
 
 .copy-bg {
   fill: var(--brand);
+  transition: fill 150ms var(--ease), filter 150ms var(--ease);
+}
+
+.box-copy-btn:hover .copy-bg {
+  fill: var(--brand-strong);
+  filter: drop-shadow(0 2px 4px rgba(5, 150, 105, 0.45));
 }
 
 .box-resize-handle {
-  cursor: nwse-resize;
-  opacity: 0.7;
-  transition: opacity 150ms var(--ease), transform 150ms var(--ease);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms var(--ease);
   touch-action: none;
 }
 
-.box-resize-handle:hover {
+.drawn-box-group:hover .box-resize-handle,
+.drawn-box-group:focus-visible .box-resize-handle,
+.drawn-box-group.is-active .box-resize-handle {
   opacity: 1;
-  transform: scale(1.15);
+  pointer-events: auto;
 }
 
 .resize-bg {
   fill: var(--surface);
   stroke: var(--brand);
   stroke-width: 1.5;
+  transition: fill 150ms var(--ease), stroke 150ms var(--ease);
 }
 
-.resize-grip {
-  color: var(--brand-strong);
+.box-resize-handle:hover .resize-bg {
+  fill: var(--brand);
+  stroke: var(--brand-strong);
 }
 
 .box-count-badge {
