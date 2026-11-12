@@ -166,48 +166,93 @@
         </aside>
 
         <section class="panel-workspace" id="panel-workspace">
-          <div class="workspace-left">
-            <div class="card panel-code" id="panel-code">
-              <div class="card-header">
-                <h2 class="card-title">Your code</h2>
-                <div class="code-actions">
-                  <button class="btn btn-secondary" id="btn-copy" type="button">Copy code</button>
-                  <button class="btn btn-secondary" id="btn-reset" type="button">Reset my edits</button>
-                  <button class="btn btn-primary" id="btn-download" type="button">Download my site</button>
-                </div>
-              </div>
-              <div class="code-box-wrapper">
-                <textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Website code. Edit it and watch the preview change."></textarea>
-              </div>
-              <div class="code-status-row">
-                <span id="line-count-display">0 lines</span>
-                <span id="storage-saved-badge">Saved on this device</span>
-              </div>
+          <div class="result-headline-card card">
+            <h2 class="build-headline" id="build-headline"></h2>
+            <p class="result-plain-note" id="result-plain-note"></p>
+            <div class="result-actions">
+              <button class="btn btn-secondary" id="btn-share-whatsapp" type="button">Share on WhatsApp</button>
             </div>
-
-            <div class="card panel-missions" id="panel-missions">
-              <div class="card-header">
-                <h2 class="card-title">Make it yours</h2>
-                <span id="missions-count">0 of 6 upgrades done.</span>
-              </div>
-              <p>Six small edits. Each one is a real skill.</p>
-              <div id="missions-list" class="missions-list"></div>
-            </div>
+            <p class="share-note-text">Only the message is shared. Your sketch and code stay on this device.</p>
           </div>
 
-          <div class="workspace-right">
-            <div class="card panel-preview" id="panel-preview">
-              <div class="card-header">
-                <h2 class="card-title">Live preview</h2>
-                <div class="preview-mode-switch" id="preview-mode-switch">
-                  <button class="btn btn-ghost active" id="btn-view-phone" type="button">Phone</button>
-                  <button class="btn btn-ghost" id="btn-view-laptop" type="button">Laptop</button>
+          <div class="workspace-split">
+            <div class="workspace-left">
+              <div class="card panel-code" id="panel-code">
+                <div class="card-header">
+                  <h2 class="card-title">Your code</h2>
+                  <div class="code-actions">
+                    <button class="btn btn-secondary btn-sm" id="btn-copy" type="button">Copy code</button>
+                    <div class="confirm-anchor">
+                      <button class="btn btn-secondary btn-sm" id="btn-reset" type="button">Reset my edits</button>
+                      <div id="reset-confirm" class="inline-confirm" hidden>
+                        <p class="confirm-msg">Go back to the plain code from your sketch?</p>
+                        <div class="confirm-btns">
+                          <button type="button" class="btn btn-secondary btn-sm" id="btn-reset-no">Keep my edits</button>
+                          <button type="button" class="btn btn-primary btn-sm" id="btn-reset-yes">Yes, reset</button>
+                        </div>
+                      </div>
+                    </div>
+                    <button class="btn btn-primary btn-sm" id="btn-download" type="button">Download my site</button>
+                  </div>
                 </div>
+                <div class="code-box-wrapper">
+                  <div class="code-gutter" id="code-gutter" aria-hidden="true"></div>
+                  <textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Website code. Edit it and watch the preview change."></textarea>
+                </div>
+                <div class="code-status-row">
+                  <span id="line-count-display">0 lines</span>
+                  <span id="storage-saved-badge">Saved on this device</span>
+                </div>
+                <p class="code-download-note">You get one HTML file. Open it in any browser, or host it for free.</p>
+                <div id="code-error-display" class="feedback-text" aria-live="polite"></div>
               </div>
-              <div class="preview-frame-wrapper">
-                <iframe id="preview" sandbox="" title="Live preview of your website"></iframe>
+
+              <div class="card panel-missions" id="panel-missions">
+                <div class="card-header">
+                  <div>
+                    <h2 class="card-title">Make it yours</h2>
+                    <p class="missions-sub">Six small edits. Each one is a real skill.</p>
+                  </div>
+                  <div class="progress-ring-wrap">
+                    <svg class="progress-ring-svg" viewBox="0 0 44 44" width="44" height="44">
+                      <circle cx="22" cy="22" r="18" fill="none" stroke="var(--border)" stroke-width="3"></circle>
+                      <circle id="missions-progress-ring" cx="22" cy="22" r="18" fill="none" stroke="url(#brandGrad)" stroke-width="3" stroke-dasharray="113.1" stroke-dashoffset="113.1" stroke-linecap="round"></circle>
+                    </svg>
+                    <span id="missions-count" class="missions-count-text">0 of 6</span>
+                  </div>
+                </div>
+                <div id="missions-complete-banner" class="missions-complete-banner" hidden>
+                  <p>All six done. You just styled a website by hand.</p>
+                </div>
+                <div id="missions-confetti" class="confetti-container" aria-hidden="true"></div>
+                <div id="missions-list" class="missions-list"></div>
               </div>
-              <p class="preview-note">The preview changes as you type.</p>
+            </div>
+
+            <div class="workspace-right">
+              <div class="card panel-preview" id="panel-preview">
+                <div class="card-header">
+                  <h2 class="card-title">Live preview</h2>
+                  <div class="preview-mode-switch" id="preview-mode-switch">
+                    <button class="btn btn-ghost btn-sm active" id="btn-view-phone" type="button">Phone</button>
+                    <button class="btn btn-ghost btn-sm" id="btn-view-laptop" type="button">Laptop</button>
+                  </div>
+                </div>
+                <div class="preview-frame-wrapper mode-phone">
+                  <div class="preview-sweep-line" id="preview-sweep-line"></div>
+                  <div class="device-bar-phone">
+                    <div class="device-notch"></div>
+                  </div>
+                  <div class="device-bar-laptop">
+                    <div class="browser-dots">
+                      <span></span><span></span><span></span>
+                    </div>
+                    <div class="browser-address">https://mysketch.site</div>
+                  </div>
+                  <iframe id="preview" sandbox="" title="Live preview of your website"></iframe>
+                </div>
+                <p class="preview-note">The preview changes as you type.</p>
+              </div>
             </div>
           </div>
         </section>

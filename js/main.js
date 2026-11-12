@@ -1,11 +1,15 @@
 import { CONFIG } from "../config.js";
 import { COPY, t } from "./copy.js";
-import { newSketch } from "./engine/sketch.js";
-import { loadTheme, saveTheme, loadSketch, loadCode } from "./store.js";
-import { initLoader } from "./motion.js";
+import { newSketch, generate, missions } from "./engine/sketch.js";
+import { loadTheme, saveTheme, loadSketch, loadCode, saveCode } from "./store.js";
+import { initLoader, animateTyping, animateCountUp, initScrollReveal } from "./motion.js";
 import { DrawUI } from "./draw-ui.js";
+import { CodeUI } from "./code-ui.js";
+import { PreviewUI } from "./preview-ui.js";
+import { MissionsUI } from "./missions-ui.js";
+import { ResultUI } from "./result-ui.js";
+import { SectionsUI } from "./sections-ui.js";
 
-// Global application state
 export const state = {
   sketch: newSketch(),
   history: [],
@@ -18,6 +22,11 @@ export const state = {
 };
 
 let drawUI = null;
+let codeUI = null;
+let previewUI = null;
+let missionsUI = null;
+let resultUI = null;
+let sectionsUI = null;
 
 function initTheme() {
   const toggleBtn = document.getElementById("theme-toggle");
@@ -94,13 +103,63 @@ export function setPhoneView(view) {
   }
 }
 
-function onBuildComplete(result) {
+function onBuildMoment(result) {
   state.built = true;
   state.code = result.code;
   state.lastGeneratedCode = result.code;
+
   setStep("code");
   setPhoneView("code");
   render();
+
+  const announcer = document.getElementById("announcer");
+  if (announcer) {
+    announcer.textContent = result.headline;
+  }
+
+  const typeDuration = CONFIG.typeMs || 1200;
+  const countUpDuration = CONFIG.countUpMs || 700;
+
+  animateCountUp(resultUI.headlineEl, result.headline, countUpDuration);
+
+  animateTyping(codeUI.textarea, result.code, typeDuration, () => {
+    codeUI.setValue(result.code, true);
+    previewUI.update(result.code);
+
+    const m = missions(result.code, state.sketch);
+    missionsUI.update(m);
+    resultUI.update(result, m);
+    sectionsUI.updateLiveNumbers(result);
+  });
+}
+
+function handleCodeChange(newCode) {
+  state.code = newCode;
+  previewUI.update(newCode);
+
+  const m = missions(newCode, state.sketch);
+  missionsUI.update(m);
+
+  const gen = generate(state.sketch);
+  resultUI.update(gen, m);
+}
+
+function handleCodeReset(defaultCode) {
+  state.code = defaultCode;
+  previewUI.update(defaultCode);
+
+  const m = missions(defaultCode, state.sketch);
+  missionsUI.update(m);
+
+  const gen = generate(state.sketch);
+  resultUI.update(gen, m);
+}
+
+function handleShowWhere(range) {
+  setPhoneView("code");
+  if (codeUI) {
+    codeUI.selectRange(range.start, range.end);
+  }
 }
 
 export function render() {
@@ -124,20 +183,42 @@ function init() {
     state.sketch = savedSketch;
   }
 
-  const savedCode = loadCode();
-  if (savedCode) {
-    state.code = savedCode;
-    state.built = true;
-  }
-
   initTheme();
   initNavigation();
 
-  drawUI = new DrawUI(state, onBuildComplete);
+  drawUI = new DrawUI(state, onBuildMoment);
+  codeUI = new CodeUI({
+    onCodeChange: handleCodeChange,
+    onReset: handleCodeReset
+  });
+  previewUI = new PreviewUI();
+  missionsUI = new MissionsUI({
+    onShowWhere: handleShowWhere
+  });
+  resultUI = new ResultUI();
+  sectionsUI = new SectionsUI();
+
+  const savedCode = loadCode();
+  if (savedCode && state.sketch.boxes.length > 0) {
+    state.code = savedCode;
+    state.lastGeneratedCode = generate(state.sketch).code;
+    state.built = true;
+
+    codeUI.setValue(savedCode, true);
+    previewUI.update(savedCode);
+
+    const gen = generate(state.sketch);
+    const m = missions(savedCode, state.sketch);
+    missionsUI.update(m);
+    resultUI.update(gen, m);
+    sectionsUI.updateLiveNumbers(gen);
+  }
+
   render();
+  initScrollReveal();
 
   initLoader(() => {
-    // Loader complete
+    // Loader finished
   });
 }
 
