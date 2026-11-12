@@ -1,40 +1,38 @@
 import { CONFIG } from "../config.js";
 import { COPY, t } from "./copy.js";
-import { newSketch, generate, missions } from "./engine/sketch.js";
-import { loadTheme, saveTheme, loadSketch, loadCode, saveCode } from "./store.js";
-import { initLoader, animateTyping, animateCountUp, initScrollReveal } from "./motion.js";
+import { generate, missions, lineCount } from "./engine/sketch.js";
+import { loadSketch, loadCode, loadTheme, saveTheme } from "./store.js";
 import { DrawUI } from "./draw-ui.js";
 import { CodeUI } from "./code-ui.js";
 import { PreviewUI } from "./preview-ui.js";
 import { MissionsUI } from "./missions-ui.js";
 import { ResultUI } from "./result-ui.js";
 import { SectionsUI } from "./sections-ui.js";
+import { animateTyping, animateCountUp, initLoader, initScrollReveal } from "./motion.js";
 
-export const state = {
-  sketch: newSketch(),
+const state = {
+  sketch: { v: 1, boxes: [], nextId: 1 },
   history: [],
   code: "",
   lastGeneratedCode: "",
+  lastBuiltSketchHash: "",
   built: false,
   activeStep: "draw",
-  phoneView: "draw",
-  previewMode: "phone"
+  phoneView: "draw"
 };
 
-let drawUI = null;
-let codeUI = null;
-let previewUI = null;
-let missionsUI = null;
-let resultUI = null;
-let sectionsUI = null;
+let drawUI, codeUI, previewUI, missionsUI, resultUI, sectionsUI;
 
 function initTheme() {
   const toggleBtn = document.getElementById("theme-toggle");
   if (!toggleBtn) return;
 
+  const currentTheme = document.documentElement.getAttribute("data-theme") || loadTheme() || "light";
+  document.documentElement.setAttribute("data-theme", currentTheme);
+
   toggleBtn.addEventListener("click", () => {
-    const current = document.documentElement.getAttribute("data-theme") || "light";
-    const next = current === "dark" ? "light" : "dark";
+    const active = document.documentElement.getAttribute("data-theme");
+    const next = active === "dark" ? "light" : "dark";
     document.documentElement.setAttribute("data-theme", next);
     saveTheme(next);
   });
@@ -58,6 +56,10 @@ function initNavigation() {
       } catch (e) {}
       setStep("draw");
       setPhoneView("draw");
+      const drawPanel = document.getElementById("panel-draw");
+      if (drawPanel) {
+        drawPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
     });
   }
 
@@ -69,6 +71,10 @@ function initNavigation() {
         } catch (e) {}
         setStep("code");
         setPhoneView("code");
+        const workspacePanel = document.getElementById("panel-workspace");
+        if (workspacePanel) {
+          workspacePanel.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
       }
     });
   }
@@ -116,9 +122,17 @@ function initNavigation() {
     if (targetStep === "draw") {
       setStep("draw");
       setPhoneView("draw");
+      const drawPanel = document.getElementById("panel-draw");
+      if (drawPanel) {
+        drawPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
     } else if (state.built) {
       setStep("code");
       setPhoneView("code");
+      const workspacePanel = document.getElementById("panel-workspace");
+      if (workspacePanel) {
+        workspacePanel.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
     }
   });
 }
@@ -136,10 +150,19 @@ export function setStep(step) {
       stepCode.classList.add("active");
     }
   }
+
+  const toolContainer = document.getElementById("tool-container");
+  if (toolContainer) {
+    toolContainer.setAttribute("data-step", step);
+  }
 }
 
 export function setPhoneView(view) {
   state.phoneView = view;
+  const toolContainer = document.getElementById("tool-container");
+  if (toolContainer) {
+    toolContainer.setAttribute("data-phone-view", view);
+  }
   const toolGrid = document.getElementById("tool-grid");
   if (toolGrid) {
     toolGrid.setAttribute("data-phone-view", view);
@@ -164,6 +187,7 @@ function onBuildMoment(result) {
   state.built = true;
   state.code = result.code;
   state.lastGeneratedCode = result.code;
+  state.lastBuiltSketchHash = JSON.stringify(state.sketch.boxes);
 
   try {
     history.pushState({ step: "code" }, "", "#code");
@@ -217,20 +241,41 @@ function handleCodeReset(defaultCode) {
 }
 
 function handleShowWhere(range) {
+  setStep("code");
   setPhoneView("code");
+  const codePanel = document.getElementById("panel-code");
+  if (codePanel) {
+    codePanel.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
   if (codeUI) {
     codeUI.selectRange(range.start, range.end);
   }
 }
 
 export function render() {
+  const toolContainer = document.getElementById("tool-container");
   const toolGrid = document.getElementById("tool-grid");
-  if (!toolGrid) return;
+  const stepCode = document.getElementById("step-code");
 
   if (state.built) {
-    toolGrid.classList.add("is-built");
+    if (toolContainer) {
+      toolContainer.classList.add("is-built");
+      toolContainer.setAttribute("data-built", "true");
+    }
+    if (toolGrid) toolGrid.classList.add("is-built");
+    if (stepCode) stepCode.removeAttribute("disabled");
   } else {
-    toolGrid.classList.remove("is-built");
+    if (toolContainer) {
+      toolContainer.classList.remove("is-built");
+      toolContainer.setAttribute("data-built", "false");
+    }
+    if (toolGrid) toolGrid.classList.remove("is-built");
+    if (stepCode) stepCode.setAttribute("disabled", "");
+  }
+
+  if (toolContainer) {
+    toolContainer.setAttribute("data-step", state.activeStep || "draw");
+    toolContainer.setAttribute("data-phone-view", state.phoneView || "draw");
   }
 
   if (drawUI) {
@@ -263,7 +308,10 @@ function init() {
   if (savedCode && state.sketch.boxes.length > 0) {
     state.code = savedCode;
     state.lastGeneratedCode = generate(state.sketch).code;
+    state.lastBuiltSketchHash = JSON.stringify(state.sketch.boxes);
     state.built = true;
+    state.activeStep = "code";
+    state.phoneView = "code";
 
     codeUI.setValue(savedCode, true);
     previewUI.update(savedCode);
@@ -273,8 +321,13 @@ function init() {
     missionsUI.update(m);
     resultUI.update(gen, m);
     sectionsUI.updateLiveNumbers(gen);
+  } else {
+    state.activeStep = "draw";
+    state.phoneView = "draw";
   }
 
+  setStep(state.activeStep);
+  setPhoneView(state.phoneView);
   render();
   initScrollReveal();
 

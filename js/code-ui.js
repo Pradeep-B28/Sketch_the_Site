@@ -57,6 +57,7 @@ export class CodeUI {
 
     this.textarea.addEventListener("scroll", () => {
       if (this.gutter) {
+        this.syncGutterSpacer();
         this.gutter.scrollTop = this.textarea.scrollTop;
       }
     });
@@ -87,6 +88,27 @@ export class CodeUI {
     }, delay);
   }
 
+  syncGutterSpacer() {
+    if (!this.gutter || !this.textarea) return;
+    let spacer = this.gutter.querySelector(".gutter-spacer");
+    const gutterBaseScrollHeight = this.gutter.scrollHeight - (spacer ? spacer.offsetHeight : 0);
+    const scrollbarDiff = Math.max(
+      0,
+      (this.textarea.scrollHeight - this.textarea.clientHeight) - (gutterBaseScrollHeight - this.gutter.clientHeight)
+    );
+    if (scrollbarDiff > 0) {
+      if (!spacer) {
+        spacer = document.createElement("div");
+        spacer.className = "gutter-spacer";
+        spacer.setAttribute("aria-hidden", "true");
+        this.gutter.appendChild(spacer);
+      }
+      spacer.style.height = `${scrollbarDiff}px`;
+    } else if (spacer) {
+      spacer.remove();
+    }
+  }
+
   updateGutter() {
     if (!this.gutter || !this.textarea) return;
     const lines = this.textarea.value.split("\n").length;
@@ -96,6 +118,8 @@ export class CodeUI {
       span.textContent = String(i);
       this.gutter.appendChild(span);
     }
+    this.syncGutterSpacer();
+    this.gutter.scrollTop = this.textarea.scrollTop;
   }
 
   updateLineCount() {
@@ -218,10 +242,17 @@ export class CodeUI {
     this.textarea.focus();
     this.textarea.setSelectionRange(start, end);
 
-    // Scroll line into view
-    const textUpToStart = this.textarea.value.substring(0, start);
-    const lineIndex = textUpToStart.split("\n").length - 1;
-    const lineHeight = 24; // approximate line height in px
-    this.textarea.scrollTop = Math.max(0, lineIndex * lineHeight - 60);
+    // Calculate line index and center line in textarea view
+    const textBefore = this.textarea.value.slice(0, start);
+    const lineIndex = textBefore.split("\n").length - 1;
+    const isMobile = window.innerWidth < 1024;
+    const lineHeight = isMobile ? (16 * 1.6) : (14 * 1.6);
+    const lineTop = lineIndex * lineHeight;
+    const targetScroll = Math.max(0, lineTop - (this.textarea.clientHeight / 2));
+
+    this.textarea.scrollTop = targetScroll;
+    if (this.gutter) {
+      this.gutter.scrollTop = targetScroll;
+    }
   }
 }

@@ -3,12 +3,13 @@ import { COPY, t } from "./copy.js";
 export class PreviewUI {
   constructor() {
     this.iframe = document.getElementById("preview");
-    this.wrapper = document.querySelector(".preview-frame-wrapper");
+    this.wrapper = document.getElementById("preview-frame-wrapper");
     this.sweepLine = document.getElementById("preview-sweep-line");
     this.btnPhone = document.getElementById("btn-view-phone");
     this.btnLaptop = document.getElementById("btn-view-laptop");
     this.mode = "phone";
 
+    this.resizeObserver = null;
     this.init();
   }
 
@@ -22,6 +23,15 @@ export class PreviewUI {
       this.btnLaptop.addEventListener("click", () => this.setMode("laptop"));
     }
 
+    if (window.ResizeObserver && this.wrapper) {
+      this.resizeObserver = new ResizeObserver(() => {
+        this.applyScale();
+      });
+      this.resizeObserver.observe(this.wrapper);
+    }
+
+    window.addEventListener("resize", () => this.applyScale());
+
     this.setMode("phone");
   }
 
@@ -34,11 +44,41 @@ export class PreviewUI {
       this.wrapper.classList.toggle("mode-phone", isPhone);
       this.wrapper.classList.toggle("mode-laptop", !isPhone);
     }
+    this.applyScale();
+  }
+
+  applyScale() {
+    if (!this.wrapper || !this.iframe) return;
+
+    const isPhone = this.mode === "phone";
+    const baseW = isPhone ? 360 : 1024;
+    const baseH = 640;
+
+    const containerWidth = this.wrapper.clientWidth;
+    if (containerWidth <= 0) return;
+
+    let scale = 1;
+    if (isPhone) {
+      scale = containerWidth < 360 ? containerWidth / 360 : 1;
+    } else {
+      scale = containerWidth / 1024;
+    }
+
+    this.iframe.style.width = `${baseW}px`;
+    this.iframe.style.height = `${baseH}px`;
+    this.iframe.style.transform = `scale(${scale})`;
+    this.iframe.style.transformOrigin = "top left";
+
+    const scaledH = Math.round(baseH * scale);
+    const deviceBar = this.wrapper.querySelector(isPhone ? ".device-bar-phone" : ".device-bar-laptop");
+    const barHeight = deviceBar ? deviceBar.offsetHeight : 0;
+    this.wrapper.style.height = `${scaledH + barHeight}px`;
   }
 
   update(code) {
     if (!this.iframe) return;
     this.iframe.srcdoc = code || "";
+    this.applyScale();
     this.triggerSweep();
   }
 

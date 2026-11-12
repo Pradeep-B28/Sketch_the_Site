@@ -9,13 +9,17 @@ export class MissionsUI {
     this.onShowWhere = options.onShowWhere || (() => {});
 
     this.container = document.getElementById("missions-list");
+    this.detailPanel = document.getElementById("mission-detail-panel");
     this.progressText = document.getElementById("missions-count");
     this.progressRing = document.getElementById("missions-progress-ring");
     this.completeBanner = document.getElementById("missions-complete-banner");
     this.confettiContainer = document.getElementById("missions-confetti");
     this.announcer = document.getElementById("announcer");
 
+    this.activeId = null;
+    this.lastMissionsResult = null;
     this.lastHeadline = "";
+
     this.init();
   }
 
@@ -23,112 +27,161 @@ export class MissionsUI {
     this.render();
   }
 
+  createTickSvg() {
+    const tick = document.createElementNS(SVG_NS, "svg");
+    tick.setAttribute("class", "mission-tick");
+    tick.setAttribute("viewBox", "0 0 20 20");
+    tick.setAttribute("width", "18");
+    tick.setAttribute("height", "18");
+    tick.setAttribute("fill", "none");
+    tick.setAttribute("aria-hidden", "true");
+
+    const circle = document.createElementNS(SVG_NS, "circle");
+    circle.setAttribute("class", "tick-circle");
+    circle.setAttribute("cx", "10");
+    circle.setAttribute("cy", "10");
+    circle.setAttribute("r", "8.5");
+    circle.setAttribute("stroke", "var(--border)");
+    circle.setAttribute("stroke-width", "1.75");
+
+    const check = document.createElementNS(SVG_NS, "path");
+    check.setAttribute("class", "tick-check");
+    check.setAttribute("d", "M 6 10.5 L 8.5 13.5 L 14 7");
+    check.setAttribute("stroke", "currentColor");
+    check.setAttribute("stroke-width", "2");
+    check.setAttribute("stroke-linecap", "round");
+    check.setAttribute("stroke-linejoin", "round");
+
+    tick.appendChild(circle);
+    tick.appendChild(check);
+    return tick;
+  }
+
   render() {
     if (!this.container) return;
     this.container.replaceChildren();
 
     MISSION_IDS.forEach((id) => {
-      const row = document.createElement("div");
-      row.className = "mission-row";
-      row.id = `mission-row-${id}`;
-      row.setAttribute("data-id", id);
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "mission-chip";
+      chip.id = `mission-chip-${id}`;
+      chip.setAttribute("data-id", id);
+      chip.setAttribute("aria-expanded", "false");
 
-      // Header row
-      const header = document.createElement("div");
-      header.className = "mission-header";
+      chip.appendChild(this.createTickSvg());
 
-      // Tick circle
-      const tick = document.createElementNS(SVG_NS, "svg");
-      tick.setAttribute("class", "mission-tick");
-      tick.setAttribute("viewBox", "0 0 24 24");
-      tick.setAttribute("width", "22");
-      tick.setAttribute("height", "22");
-      tick.setAttribute("fill", "none");
+      const label = document.createElement("span");
+      label.className = "mission-chip-label";
+      label.textContent = t(`missions.${id}.title`);
+      chip.appendChild(label);
 
-      const circle = document.createElementNS(SVG_NS, "circle");
-      circle.setAttribute("class", "tick-circle");
-      circle.setAttribute("cx", "12");
-      circle.setAttribute("cy", "12");
-      circle.setAttribute("r", "10");
-      circle.setAttribute("stroke", "var(--border)");
-      circle.setAttribute("stroke-width", "2");
+      chip.addEventListener("click", () => {
+        this.toggleDetail(id);
+      });
 
-      const check = document.createElementNS(SVG_NS, "path");
-      check.setAttribute("class", "tick-check");
-      check.setAttribute("d", "M 7 12.5 L 10.5 16 L 17 8.5");
-      check.setAttribute("stroke", "currentColor");
-      check.setAttribute("stroke-width", "2.5");
-      check.setAttribute("stroke-linecap", "round");
-      check.setAttribute("stroke-linejoin", "round");
-
-      tick.appendChild(circle);
-      tick.appendChild(check);
-      header.appendChild(tick);
-
-      // Title
-      const title = document.createElement("span");
-      title.className = "mission-title";
-      title.textContent = t(`missions.${id}.title`);
-      header.appendChild(title);
-
-      // Expand arrow
-      const toggleBtn = document.createElement("button");
-      toggleBtn.type = "button";
-      toggleBtn.className = "mission-expand-btn";
-      toggleBtn.setAttribute("aria-expanded", "false");
-      toggleBtn.setAttribute("aria-label", `Toggle details for ${t(`missions.${id}.title`)}`);
-      toggleBtn.textContent = "+";
-      header.appendChild(toggleBtn);
-
-      row.appendChild(header);
-
-      // Body (details)
-      const body = document.createElement("div");
-      body.className = "mission-body";
-      body.hidden = true;
-
-      const hint = document.createElement("p");
-      hint.className = "mission-hint";
-      hint.textContent = t(`missions.${id}.hint`);
-      body.appendChild(hint);
-
-      const exampleBox = document.createElement("div");
-      exampleBox.className = "mission-example";
-      const exampleLabel = document.createElement("span");
-      exampleLabel.className = "example-label";
-      exampleLabel.textContent = t("missions.exampleLabel") || "Example";
-      exampleBox.appendChild(exampleLabel);
-
-      const codePre = document.createElement("pre");
-      codePre.className = "example-code";
-      codePre.textContent = t(`missions.${id}.example`);
-      exampleBox.appendChild(codePre);
-      body.appendChild(exampleBox);
-
-      const showBtn = document.createElement("button");
-      showBtn.type = "button";
-      showBtn.className = "btn btn-secondary btn-sm btn-show-where";
-      showBtn.textContent = t("missions.show") || "Show me where";
-      body.appendChild(showBtn);
-
-      row.appendChild(body);
-
-      // Toggle accordion
-      const toggle = () => {
-        const isOpen = !body.hidden;
-        body.hidden = isOpen;
-        toggleBtn.textContent = isOpen ? "+" : "−";
-        toggleBtn.setAttribute("aria-expanded", String(!isOpen));
-      };
-
-      header.addEventListener("click", toggle);
-
-      this.container.appendChild(row);
+      this.container.appendChild(chip);
     });
+  }
+
+  toggleDetail(id) {
+    if (this.activeId === id) {
+      this.activeId = null;
+    } else {
+      this.activeId = id;
+    }
+
+    // Update chip active states
+    MISSION_IDS.forEach((mid) => {
+      const chip = document.getElementById(`mission-chip-${mid}`);
+      if (chip) {
+        const isActive = mid === this.activeId;
+        chip.classList.toggle("active", isActive);
+        chip.setAttribute("aria-expanded", String(isActive));
+      }
+    });
+
+    this.renderDetail();
+  }
+
+  renderDetail() {
+    if (!this.detailPanel) return;
+
+    if (!this.activeId) {
+      this.detailPanel.hidden = true;
+      this.detailPanel.replaceChildren();
+      return;
+    }
+
+    const id = this.activeId;
+    this.detailPanel.hidden = false;
+    this.detailPanel.replaceChildren();
+
+    const currentItem = this.lastMissionsResult?.items?.find((x) => x.id === id);
+
+    const content = document.createElement("div");
+    content.className = "detail-content";
+
+    const topRow = document.createElement("div");
+    topRow.className = "detail-top-row";
+
+    const title = document.createElement("h3");
+    title.className = "detail-title";
+    title.textContent = t(`missions.${id}.title`);
+    topRow.appendChild(title);
+
+    const closeBtn = document.createElement("button");
+    closeBtn.type = "button";
+    closeBtn.className = "detail-close-btn";
+    closeBtn.setAttribute("aria-label", "Close details");
+    closeBtn.textContent = "×";
+    closeBtn.addEventListener("click", () => this.toggleDetail(id));
+    topRow.appendChild(closeBtn);
+
+    content.appendChild(topRow);
+
+    const hint = document.createElement("p");
+    hint.className = "detail-hint";
+    hint.textContent = t(`missions.${id}.hint`);
+    content.appendChild(hint);
+
+    const exampleBox = document.createElement("div");
+    exampleBox.className = "detail-example-box";
+
+    const exampleLabel = document.createElement("span");
+    exampleLabel.className = "example-label";
+    exampleLabel.textContent = t("missions.exampleLabel") || "Example";
+    exampleBox.appendChild(exampleLabel);
+
+    const codePre = document.createElement("pre");
+    codePre.className = "example-code";
+    codePre.textContent = t(`missions.${id}.example`);
+    exampleBox.appendChild(codePre);
+
+    content.appendChild(exampleBox);
+
+    const showBtn = document.createElement("button");
+    showBtn.type = "button";
+    showBtn.id = "btn-mission-show";
+    showBtn.className = "btn btn-secondary btn-sm btn-show-where";
+    showBtn.textContent = t("missions.show") || "Show me where";
+
+    if (currentItem && currentItem.range) {
+      showBtn.style.display = "inline-flex";
+      showBtn.addEventListener("click", () => {
+        this.onShowWhere(currentItem.range);
+      });
+    } else {
+      showBtn.style.display = "none";
+    }
+
+    content.appendChild(showBtn);
+    this.detailPanel.appendChild(content);
   }
 
   update(missionsResult) {
     if (!missionsResult) return;
+    this.lastMissionsResult = missionsResult;
 
     const { items, done, total, complete, headline } = missionsResult;
 
@@ -140,41 +193,41 @@ export class MissionsUI {
       }
     }
 
-    // Update progress text
+    // Update progress text beside ring
     if (this.progressText) {
       this.progressText.textContent = t("missions.progress", { done, total }) || `${done} of ${total} upgrades done.`;
     }
 
-    // Update progress ring
+    // Update progress ring (r = 14, circumference = 87.96)
     if (this.progressRing) {
-      const radius = 18;
+      const radius = 14;
       const circumference = 2 * Math.PI * radius;
       const progress = total > 0 ? done / total : 0;
       const offset = circumference * (1 - progress);
       this.progressRing.style.strokeDashoffset = String(offset);
     }
 
-    // Update rows
+    // Update chip items
     items.forEach((item) => {
-      const row = document.getElementById(`mission-row-${item.id}`);
-      if (!row) return;
+      const chip = document.getElementById(`mission-chip-${item.id}`);
+      if (chip) {
+        chip.classList.toggle("is-done", item.done);
+      }
+    });
 
-      const wasDone = row.classList.contains("is-done");
-      row.classList.toggle("is-done", item.done);
-
-      const showBtn = row.querySelector(".btn-show-where");
+    // Update currently open detail panel if active
+    if (this.activeId) {
+      const showBtn = this.detailPanel?.querySelector(".btn-show-where");
       if (showBtn) {
-        if (item.range) {
+        const currentItem = items.find((x) => x.id === this.activeId);
+        if (currentItem && currentItem.range) {
           showBtn.style.display = "inline-flex";
-          showBtn.onclick = (e) => {
-            e.stopPropagation();
-            this.onShowWhere(item.range);
-          };
+          showBtn.onclick = () => this.onShowWhere(currentItem.range);
         } else {
           showBtn.style.display = "none";
         }
       }
-    });
+    }
 
     // Handle complete celebration
     if (this.completeBanner) {

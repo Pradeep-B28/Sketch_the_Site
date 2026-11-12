@@ -276,6 +276,7 @@ export class DrawUI {
     const result = generate(this.state.sketch);
     this.state.code = result.code;
     this.state.lastGeneratedCode = result.code;
+    this.state.lastBuiltSketchHash = JSON.stringify(this.state.sketch.boxes);
     this.state.built = true;
     saveCode(this.state.code);
     saveSketch(this.state.sketch);
@@ -582,8 +583,15 @@ export class DrawUI {
     }
 
     if (this.btnBuild) {
-      this.btnBuild.disabled = count === 0 || this.isSamplePlaying;
-      this.btnBuild.textContent = this.state.built ? t("draw.rebuild") : t("draw.build");
+      if (this.state.built) {
+        this.btnBuild.textContent = t("draw.rebuild");
+        const currentHash = JSON.stringify(this.state.sketch.boxes);
+        const hasChanged = currentHash !== (this.state.lastBuiltSketchHash || "");
+        this.btnBuild.disabled = count === 0 || this.isSamplePlaying || !hasChanged;
+      } else {
+        this.btnBuild.textContent = t("draw.build");
+        this.btnBuild.disabled = count === 0 || this.isSamplePlaying;
+      }
     }
   }
 
